@@ -72,6 +72,7 @@ const generateRandomUA = () => {
           category: parent,
           child_category: e.querySelector(".children-category-title").innerHTML,
           url: e.querySelector(".children-category-title").href,
+          products: [],
         };
       })
     );
@@ -135,30 +136,75 @@ const generateRandomUA = () => {
 
       children_categories[index].product_count = Number(product_count);
 
-      fs.writeFile(
-        "categories.json",
-        JSON.stringify(children_categories),
-        (err) => {
-          if (err) throw err;
-          console.log("File saved");
-        }
-      );
+      // fs.writeFile(
+      //   "courses.json",
+      //   JSON.stringify(children_categories),
+      //   (err) => {
+      //     if (err) throw err;
+      //     console.log("File saved");
+      //   }
+      // );
+
+      let interval = setInterval(() => {
+        const button_more = page2.evaluate(() => {
+          const element = document.querySelector(".button-more");
+          return window.getComputedStyle(element).display;
+        });
+
+        button_more.then((e) => {
+          console.log(e);
+          if (e === "inline-flex") {
+            page2.click(".button-more");
+          } else {
+            clearInterval(interval);
+            setTimeout(() => {
+              let products = page2.$$eval(".product-card", (elements) =>
+                elements.map((e) => ({
+                  title: e.querySelector(".card-info-block .subtitle a")
+                    .innerHTML,
+                  price: Number(
+                    e
+                      .querySelector(
+                        ".card-info-block .product-card-main-info-wrapper .product-card-price"
+                      )
+                      .innerHTML.replace(/\D/g, "")
+                  ),
+                  url: e.querySelector(".card-info-block .subtitle a").href,
+                  image: e
+                    .querySelector(".image-wrapper img")
+                    .getAttribute("src"),
+                }))
+              );
+
+              products.then((res) => {
+                fs.writeFile(
+                  "courses.json",
+                  JSON.stringify(children_categories),
+                  (err) => {
+                    if (err) throw err;
+                    console.log("File saved");
+                    page2.close();
+
+                    // browser.close();
+                  }
+                );
+              });
+            }, 3000);
+          }
+        });
+      }, 3000);
 
       // await page2.waitForTimeout(5000); // 2 second
-      await page2.close();
+      // await page2.close();
     } else await page2.close();
   }
 
   await page.screenshot({ path: "step2.png" });
 
-  fs.writeFile(
-    "categories.json",
-    JSON.stringify(children_categories),
-    (err) => {
-      if (err) throw err;
-      console.log("File saved");
-    }
-  );
+  fs.writeFile("courses.json", JSON.stringify(children_categories), (err) => {
+    if (err) throw err;
+    console.log("File saved");
+  });
 
   await page.close();
 
