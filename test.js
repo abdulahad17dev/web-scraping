@@ -56,8 +56,9 @@ const generateRandomUA = () => {
   });
 
   // Navigate the page to target website
-  await page.goto("https://uzum.uz/ru/category/globusy-14370", {
+  await page.goto("https://uzum.uz/ru/category/bosonozhki-12271", {
     waitUntil: "load",
+    timeout: 180000,
   });
 
   // Get the text content of the page's body
@@ -66,7 +67,7 @@ const generateRandomUA = () => {
   //   .non-extendable-offer .products .card
 
   await page.waitForSelector(".products-list .product-card", {
-    timeout: 50000,
+    timeout: 180000,
   });
 
   // let interval = setInterval(() => {
@@ -191,7 +192,7 @@ const generateRandomUA = () => {
     });
 
     // Navigate the page to target website
-    await page2.goto(boxes[index].url, { waitUntil: "load" });
+    await page2.goto(boxes[index].url, { waitUntil: "load", timeout: 180000 });
 
     const cloudflare = await page2.evaluate(() => {
       const element = document.querySelector(".indent-from-header");
@@ -202,8 +203,8 @@ const generateRandomUA = () => {
     });
 
     if (cloudflare) {
-      // await page2.waitForSelector(".products-list .product-card", {
-      //   timeout: 30000,
+      // await page2.waitForSelector(".product-info-card", {
+      //   timeout: 180000,
       // });
       // await page2.close();
 
