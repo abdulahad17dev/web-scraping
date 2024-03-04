@@ -11,6 +11,11 @@ const generateRandomUA = () => {
   const browser = await puppeteer.launch({
     headless: false,
     args: [`--window-size=1024,768`],
+    protocolTimeout: 24000000,
+    executablePath:
+      process.env.NODE_ENV === "production"
+        ? process.env.PUPPETEER_EXECUTABLE_PATH
+        : puppeteer.executablePath(),
   });
 
   const page = await browser.newPage();
@@ -69,8 +74,10 @@ const generateRandomUA = () => {
           ).innerHTML;
         return {
           product_count: 0,
-          category: parent,
-          child_category: e.querySelector(".children-category-title").innerHTML,
+          category: parent.trim(),
+          child_category: e
+            .querySelector(".children-category-title")
+            .innerHTML.trim(),
           url: e.querySelector(".children-category-title").href,
           products: [],
         };
@@ -136,6 +143,57 @@ const generateRandomUA = () => {
 
       children_categories[index].product_count = Number(product_count);
 
+      const getData = () => {
+        return page2.evaluate(async () => {
+          return await new Promise((resolve) => {
+            const element = document.querySelector(".button-more");
+            let products = [];
+            let interval = setInterval(() => {
+              if (window.getComputedStyle(element).display === "inline-flex") {
+                element.click();
+              } else {
+                clearInterval(interval);
+                let elements = document.querySelectorAll(".product-card");
+
+                elements.forEach((e) => {
+                  products.push({
+                    title: e
+                      .querySelector(".card-info-block .subtitle a")
+                      .innerHTML.trim(),
+                    price: Number(
+                      e
+                        .querySelector(
+                          ".card-info-block .product-card-main-info-wrapper .product-card-price"
+                        )
+                        .innerHTML.replace(/\D/g, "")
+                    ),
+                    url: e.querySelector(".card-info-block .subtitle a").href,
+                    image: e
+                      .querySelector(".image-wrapper img")
+                      .getAttribute("src"),
+                  });
+                });
+
+                resolve(products);
+              }
+            }, 3000);
+          });
+        });
+      };
+
+      let boxes = await getData();
+
+      console.log(boxes);
+
+      // fs.writeFile(
+      //   "courses.json",
+      //   JSON.stringify(children_categories),
+      //   (err) => {
+      //     if (err) throw err;
+      //     console.log("File saved", boxes);
+      //   }
+      // );
+
       // fs.writeFile(
       //   "courses.json",
       //   JSON.stringify(children_categories),
@@ -144,55 +202,6 @@ const generateRandomUA = () => {
       //     console.log("File saved");
       //   }
       // );
-
-      let interval = setInterval(() => {
-        const button_more = page2.evaluate(() => {
-          const element = document.querySelector(".button-more");
-          return window.getComputedStyle(element).display;
-        });
-
-        button_more.then((e) => {
-          console.log(e);
-          if (e === "inline-flex") {
-            page2.click(".button-more");
-          } else {
-            clearInterval(interval);
-            setTimeout(() => {
-              let products = page2.$$eval(".product-card", (elements) =>
-                elements.map((e) => ({
-                  title: e.querySelector(".card-info-block .subtitle a")
-                    .innerHTML,
-                  price: Number(
-                    e
-                      .querySelector(
-                        ".card-info-block .product-card-main-info-wrapper .product-card-price"
-                      )
-                      .innerHTML.replace(/\D/g, "")
-                  ),
-                  url: e.querySelector(".card-info-block .subtitle a").href,
-                  image: e
-                    .querySelector(".image-wrapper img")
-                    .getAttribute("src"),
-                }))
-              );
-
-              products.then((res) => {
-                fs.writeFile(
-                  "courses.json",
-                  JSON.stringify(children_categories),
-                  (err) => {
-                    if (err) throw err;
-                    console.log("File saved");
-                    page2.close();
-
-                    // browser.close();
-                  }
-                );
-              });
-            }, 3000);
-          }
-        });
-      }, 3000);
 
       // await page2.waitForTimeout(5000); // 2 second
       // await page2.close();

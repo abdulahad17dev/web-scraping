@@ -17,17 +17,12 @@
 
 const fs = require("fs");
 const puppeteer = require("puppeteer");
+const user_agents = require("./user-agents.json");
+require("dotenv").config();
+
 const generateRandomUA = () => {
   // Array of random user agents
-  const userAgents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
-  ];
+  const userAgents = user_agents;
   // Get a random index based on the length of the user agents array
   const randomUAIndex = Math.floor(Math.random() * userAgents.length);
   // Return a random user agent using the index above
@@ -39,6 +34,11 @@ const generateRandomUA = () => {
   const browser = await puppeteer.launch({
     headless: false,
     args: [`--window-size=1024,768`],
+    protocolTimeout: 24000000,
+    executablePath:
+      process.env.NODE_ENV === "production"
+        ? process.env.PUPPETEER_EXECUTABLE_PATH
+        : puppeteer.executablePath(),
   });
 
   // Open a new blank page
@@ -56,7 +56,7 @@ const generateRandomUA = () => {
   });
 
   // Navigate the page to target website
-  await page.goto("https://uzum.uz/ru/category/stacionarnye-telefony-13733", {
+  await page.goto("https://uzum.uz/ru/category/globusy-14370", {
     waitUntil: "load",
   });
 
@@ -122,52 +122,54 @@ const generateRandomUA = () => {
             element.click();
           } else {
             clearInterval(interval);
-            // setTimeout(() => {
-            let elements = document.querySelectorAll(".product-card");
+            setTimeout(() => {
+              let elements = document.querySelectorAll(".product-card");
 
-            elements.forEach((e) => {
-              products.push({
-                title: e.querySelector(".card-info-block .subtitle a")
-                  .innerHTML,
-                price: Number(
-                  e
-                    .querySelector(
-                      ".card-info-block .product-card-main-info-wrapper .product-card-price"
-                    )
-                    .innerHTML.replace(/\D/g, "")
-                ),
-                url: e.querySelector(".card-info-block .subtitle a").href,
-                image: e
-                  .querySelector(".image-wrapper img")
-                  .getAttribute("src"),
+              elements.forEach((e) => {
+                products.push({
+                  title: e
+                    .querySelector(".card-info-block .subtitle a")
+                    .innerHTML.trim(),
+                  price: Number(
+                    e
+                      .querySelector(
+                        ".card-info-block .product-card-main-info-wrapper .product-card-price"
+                      )
+                      .innerHTML.replace(/\D/g, "")
+                  ),
+                  url: e.querySelector(".card-info-block .subtitle a").href,
+                  image: e
+                    .querySelector(".image-wrapper img")
+                    .getAttribute("src"),
+                  product_info: null,
+                });
               });
-            });
 
-            resolve(products);
+              resolve(products);
 
-            // let products = elements.map((e) => ({
-            //   title: e.querySelector(".card-info-block .subtitle a").innerHTML,
-            //   price: Number(
-            //     e
-            //       .querySelector(
-            //         ".card-info-block .product-card-main-info-wrapper .product-card-price"
-            //       )
-            //       .innerHTML.replace(/\D/g, "")
-            //   ),
-            //   url: e.querySelector(".card-info-block .subtitle a").href,
-            //   image: e.querySelector(".image-wrapper img").getAttribute("src"),
-            // }));
+              // let products = elements.map((e) => ({
+              //   title: e.querySelector(".card-info-block .subtitle a").innerHTML,
+              //   price: Number(
+              //     e
+              //       .querySelector(
+              //         ".card-info-block .product-card-main-info-wrapper .product-card-price"
+              //       )
+              //       .innerHTML.replace(/\D/g, "")
+              //   ),
+              //   url: e.querySelector(".card-info-block .subtitle a").href,
+              //   image: e.querySelector(".image-wrapper img").getAttribute("src"),
+              // }));
 
-            // products.then((res) => {
-            //   fs.writeFile("courses.json", JSON.stringify(res), (err) => {
-            //     if (err) throw err;
-            //     console.log(res);
-            //     // page.close();
+              // products.then((res) => {
+              //   fs.writeFile("courses.json", JSON.stringify(res), (err) => {
+              //     if (err) throw err;
+              //     console.log(res);
+              //     // page.close();
 
-            //     // browser.close();
-            //   });
-            // });
-            // }, 3000);
+              //     // browser.close();
+              //   });
+              // });
+            }, 3000);
           }
         }, 3000);
       });
@@ -176,7 +178,70 @@ const generateRandomUA = () => {
 
   let boxes = await getData();
 
-  fs.writeFile("courses.json", JSON.stringify(boxes), (err) => {
+  for (let index = 0; index < boxes.length; index++) {
+    const page2 = await browser.newPage();
+
+    const customUA = generateRandomUA();
+
+    await page2.setUserAgent(customUA);
+
+    await page2.setViewport({
+      width: 1024,
+      height: 768,
+    });
+
+    // Navigate the page to target website
+    await page2.goto(boxes[index].url, { waitUntil: "load" });
+
+    const cloudflare = await page2.evaluate(() => {
+      const element = document.querySelector(".indent-from-header");
+      if (element) {
+        return true;
+      }
+      return false;
+    });
+
+    if (cloudflare) {
+      // await page2.waitForSelector(".products-list .product-card", {
+      //   timeout: 30000,
+      // });
+      // await page2.close();
+
+      const response = await page2.evaluate(async () => {
+        const url = window.location.pathname.split("-");
+        const product_id = url[url.length - 1];
+
+        if (product_id) {
+          try {
+            const response = await fetch(
+              `https://api.uzum.uz/api/v2//product/${product_id}`,
+              {
+                method: "GET",
+                mode: "cors",
+                cache: "no-cache",
+                credentials: "same-origin",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                redirect: "follow",
+                referrerPolicy: "no-referrer",
+              }
+            );
+            return response.json();
+          } catch (err) {
+            console.log(err);
+          }
+        }
+        return null;
+      });
+
+      boxes[index].product_info = response?.payload?.data || null;
+
+      await page2.close();
+    } else await page2.close();
+  }
+
+  await fs.writeFile("courses.json", JSON.stringify(boxes), (err) => {
     if (err) throw err;
     console.log("File saved", boxes);
   });
