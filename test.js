@@ -33,7 +33,12 @@ const generateRandomUA = () => {
   // Launch the browser
   const browser = await puppeteer.launch({
     headless: false,
-    args: [`--window-size=1024,768`],
+    args: [
+      `--window-size=1024,768`,
+      // `--proxy-server=http://38.154.227.167:5868`,
+      // "--no-sandbox",
+      // "--disable-setuid-sandbox",
+    ],
     protocolTimeout: 24000000,
     executablePath:
       process.env.NODE_ENV === "production"
@@ -50,16 +55,21 @@ const generateRandomUA = () => {
   // Set custom user agent
   await page.setUserAgent(customUA);
 
+  // page.setExtraHTTPHeaders
+
   await page.setViewport({
     width: 1024,
     height: 768,
   });
 
   // Navigate the page to target website
-  await page.goto("https://uzum.uz/ru/category/bosonozhki-12271", {
-    waitUntil: "load",
-    timeout: 180000,
-  });
+  await page.goto(
+    "https://uzum.uz/ru/category/aksessuary-dlya-smartfonov-10398",
+    {
+      waitUntil: "load",
+      timeout: 180000,
+    }
+  );
 
   // Get the text content of the page's body
   const content = await page.evaluate(() => document.body.innerHTML);
@@ -112,72 +122,148 @@ const generateRandomUA = () => {
   //   });
   // }, 3000);
 
-  const getData = () => {
-    return page.evaluate(async () => {
-      return await new Promise((resolve) => {
-        const element = document.querySelector(".button-more");
-        // return window.getComputedStyle(element).display;
-        let products = [];
-        let interval = setInterval(() => {
-          if (window.getComputedStyle(element).display === "inline-flex") {
-            element.click();
-          } else {
-            clearInterval(interval);
-            setTimeout(() => {
-              let elements = document.querySelectorAll(".product-card");
+  // const getData = () => {
+  //   return page.evaluate(async () => {
+  //     return await new Promise((resolve) => {
+  //       const element = document.querySelector(".button-more");
+  //       // return window.getComputedStyle(element).display;
+  //       let products = [];
+  //       let interval = setInterval(() => {
+  //         if (window.getComputedStyle(element).display === "inline-flex") {
+  //           element.click();
+  //         } else {
+  //           clearInterval(interval);
+  //           setTimeout(() => {
+  //             let elements = document.querySelectorAll(".product-card");
 
-              elements.forEach((e) => {
-                products.push({
-                  title: e
-                    .querySelector(".card-info-block .subtitle a")
-                    .innerHTML.trim(),
-                  price: Number(
-                    e
-                      .querySelector(
-                        ".card-info-block .product-card-main-info-wrapper .product-card-price"
-                      )
-                      .innerHTML.replace(/\D/g, "")
-                  ),
-                  url: e.querySelector(".card-info-block .subtitle a").href,
-                  image: e
-                    .querySelector(".image-wrapper img")
-                    .getAttribute("src"),
-                  product_info: null,
-                });
-              });
+  //             elements.forEach((e) => {
+  //               products.push({
+  //                 title: e
+  //                   .querySelector(".card-info-block .subtitle a")
+  //                   .innerHTML.trim(),
+  //                 price: Number(
+  //                   e
+  //                     .querySelector(
+  //                       ".card-info-block .product-card-main-info-wrapper .product-card-price"
+  //                     )
+  //                     .innerHTML.replace(/\D/g, "")
+  //                 ),
+  //                 url: e.querySelector(".card-info-block .subtitle a").href,
+  //                 image: e
+  //                   .querySelector(".image-wrapper img")
+  //                   .getAttribute("src"),
+  //                 product_info: null,
+  //               });
+  //             });
 
-              resolve(products);
+  //             resolve(products);
 
-              // let products = elements.map((e) => ({
-              //   title: e.querySelector(".card-info-block .subtitle a").innerHTML,
-              //   price: Number(
-              //     e
-              //       .querySelector(
-              //         ".card-info-block .product-card-main-info-wrapper .product-card-price"
-              //       )
-              //       .innerHTML.replace(/\D/g, "")
-              //   ),
-              //   url: e.querySelector(".card-info-block .subtitle a").href,
-              //   image: e.querySelector(".image-wrapper img").getAttribute("src"),
-              // }));
+  //             // let products = elements.map((e) => ({
+  //             //   title: e.querySelector(".card-info-block .subtitle a").innerHTML,
+  //             //   price: Number(
+  //             //     e
+  //             //       .querySelector(
+  //             //         ".card-info-block .product-card-main-info-wrapper .product-card-price"
+  //             //       )
+  //             //       .innerHTML.replace(/\D/g, "")
+  //             //   ),
+  //             //   url: e.querySelector(".card-info-block .subtitle a").href,
+  //             //   image: e.querySelector(".image-wrapper img").getAttribute("src"),
+  //             // }));
 
-              // products.then((res) => {
-              //   fs.writeFile("courses.json", JSON.stringify(res), (err) => {
-              //     if (err) throw err;
-              //     console.log(res);
-              //     // page.close();
+  //             // products.then((res) => {
+  //             //   fs.writeFile("courses.json", JSON.stringify(res), (err) => {
+  //             //     if (err) throw err;
+  //             //     console.log(res);
+  //             //     // page.close();
 
-              //     // browser.close();
-              //   });
-              // });
-            }, 3000);
-          }
-        }, 3000);
-      });
+  //             //     // browser.close();
+  //             //   });
+  //             // });
+  //           }, 3000);
+  //         }
+  //       }, 3000);
+  //     });
+  //   });
+  // };
+
+  const scrapeProducts = async () => {
+    await page.waitForSelector(".products-list .product-card", {
+      timeout: 180000,
     });
+    const products = await page.evaluate(() => {
+      const productElements = document.querySelectorAll(".product-card");
+      const productList = [];
+
+      productElements.forEach((e) => {
+        productList.push({
+          title: e
+            .querySelector(".card-info-block .subtitle a")
+            .innerHTML.trim(),
+          price: Number(
+            e
+              .querySelector(
+                ".card-info-block .product-card-main-info-wrapper .product-card-price"
+              )
+              .innerHTML.replace(/\D/g, "")
+          ),
+          url: e.querySelector(".card-info-block .subtitle a").href,
+          image: e.querySelector(".image-wrapper img").getAttribute("src"),
+          product_info: null,
+        });
+      });
+
+      return productList;
+    });
+
+    return products;
   };
 
-  let boxes = await getData();
+  let currentPage = 1;
+
+  let allProducts = [];
+
+  const scrapePagesRecursively = async () => {
+    let empty_result = await page.evaluate(() => {
+      const element = document.querySelector(".pagination-wrapper .pagination");
+      if (element) {
+        return element;
+      }
+
+      return null;
+    });
+
+    console.log(true, empty_result);
+    if (empty_result) {
+      const productsOnPage = await scrapeProducts();
+      allProducts = allProducts.concat(productsOnPage);
+
+      currentPage++;
+      await page.goto(
+        "https://uzum.uz/ru/category/aksessuary-dlya-smartfonov-10398?currentPage=" +
+          currentPage,
+        {
+          waitUntil: "load",
+          timeout: 180000,
+        }
+      );
+
+      await page.waitForSelector(".products-list .product-card", {
+        timeout: 180000,
+      });
+      await scrapePagesRecursively();
+    } else {
+      currentPage = 1;
+    }
+  };
+
+  await scrapePagesRecursively();
+
+  console.log(allProducts.length);
+
+  console.log(currentPage);
+
+  let boxes = allProducts;
 
   for (let index = 0; index < boxes.length; index++) {
     const page2 = await browser.newPage();
@@ -215,7 +301,7 @@ const generateRandomUA = () => {
         if (product_id) {
           try {
             const response = await fetch(
-              `https://api.uzum.uz/api/v2//product/${product_id}`,
+              `https://api.uzum.uz/api/v2/product/${product_id}`,
               {
                 method: "GET",
                 mode: "cors",
