@@ -220,17 +220,19 @@ const generateRandomUA = () => {
 
       const scrapePagesRecursively = async () => {
         let empty_result = await page2.evaluate(() => {
-          const element = document.querySelector(
-            ".pagination-wrapper .pagination"
-          );
+          const element = document.querySelector(".pagination-wrapper");
           if (element) {
-            return element;
+            const element_style =
+              window.getComputedStyle(element).display === "none"
+                ? false
+                : true;
+            return element_style;
           }
 
           return null;
         });
 
-        console.log(true, empty_result);
+        console.log(empty_result);
         if (empty_result) {
           const productsOnPage = await scrapeProducts();
           allProducts = allProducts.concat(productsOnPage);
@@ -328,14 +330,21 @@ const generateRandomUA = () => {
 
       console.log(children_categories.length, "all children categories");
 
-      fs.writeFile(
-        "courses.json",
-        JSON.stringify(children_categories),
-        (err) => {
-          if (err) throw err;
-          console.log("File saved");
-        }
-      );
+      var out = "[";
+      for (var indx = 0; indx < children_categories.length - 1; indx++) {
+        out += JSON.stringify(children_categories[indx], null, 4) + ",";
+      }
+      out +=
+        JSON.stringify(
+          children_categories[children_categories.length - 1],
+          null,
+          4
+        ) + "]";
+
+      fs.writeFile("courses.json", out, (err) => {
+        if (err) throw err;
+        console.log("File saved");
+      });
 
       // await page2.waitForTimeout(5000); // 2 second
       await page2.close();
@@ -344,7 +353,18 @@ const generateRandomUA = () => {
 
   await page.screenshot({ path: "step2.png" });
 
-  fs.writeFile("courses.json", JSON.stringify(children_categories), (err) => {
+  var out = "[";
+  for (var indx = 0; indx < children_categories.length - 1; indx++) {
+    out += JSON.stringify(children_categories[indx], null, 4) + ",";
+  }
+  out +=
+    JSON.stringify(
+      children_categories[children_categories.length - 1],
+      null,
+      4
+    ) + "]";
+
+  fs.writeFile("courses.json", out, (err) => {
     if (err) throw err;
     console.log("File saved");
   });

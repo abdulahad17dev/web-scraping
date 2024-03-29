@@ -18,6 +18,7 @@
 const fs = require("fs");
 const puppeteer = require("puppeteer");
 const user_agents = require("./user-agents.json");
+const stream = require("stream");
 require("dotenv").config();
 
 const generateRandomUA = () => {
@@ -63,13 +64,10 @@ const generateRandomUA = () => {
   });
 
   // Navigate the page to target website
-  await page.goto(
-    "https://uzum.uz/ru/category/aksessuary-dlya-smartfonov-10398",
-    {
-      waitUntil: "load",
-      timeout: 180000,
-    }
-  );
+  await page.goto("https://uzum.uz/ru/category/stacionarnye-telefony-13733", {
+    waitUntil: "load",
+    timeout: 180000,
+  });
 
   // Get the text content of the page's body
   const content = await page.evaluate(() => document.body.innerHTML);
@@ -225,22 +223,32 @@ const generateRandomUA = () => {
 
   const scrapePagesRecursively = async () => {
     let empty_result = await page.evaluate(() => {
-      const element = document.querySelector(".pagination-wrapper .pagination");
+      // const element = document.querySelector(
+      //   ".pagination-wrapper .pagination"
+      // );
+      // if (element) {
+      //   return element;
+      // }
+
+      // return null;
+      const element = document.querySelector(".pagination-wrapper");
       if (element) {
-        return element;
+        const element_style =
+          window.getComputedStyle(element).display === "none" ? false : true;
+        return element_style;
       }
 
       return null;
     });
 
-    console.log(true, empty_result);
+    console.log(empty_result);
     if (empty_result) {
       const productsOnPage = await scrapeProducts();
       allProducts = allProducts.concat(productsOnPage);
 
       currentPage++;
       await page.goto(
-        "https://uzum.uz/ru/category/aksessuary-dlya-smartfonov-10398?currentPage=" +
+        "https://uzum.uz/ru/category/stacionarnye-telefony-13733?currentPage=" +
           currentPage,
         {
           waitUntil: "load",
@@ -326,11 +334,19 @@ const generateRandomUA = () => {
 
       await page2.close();
     } else await page2.close();
+
+    // await page2.waitForTimeout(2000); // 2 second
   }
 
-  await fs.writeFile("courses.json", JSON.stringify(boxes), (err) => {
+  var out = "[";
+  for (var indx = 0; indx < boxes.length - 1; indx++) {
+    out += JSON.stringify(boxes[indx], null, 4) + ",";
+  }
+  out += JSON.stringify(boxes[boxes.length - 1], null, 4) + "]";
+
+  await fs.writeFile("courses.json", out, (err) => {
     if (err) throw err;
-    console.log("File saved", boxes);
+    console.log("File saved");
   });
 
   // const products = await page.$$eval(".product-card", (elements) =>
