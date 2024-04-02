@@ -7,6 +7,16 @@ const generateRandomUA = () => {
   return userAgents[randomUAIndex];
 };
 
+const saveToFile = (data, filePath) => {
+  try {
+    const jsonData = JSON.stringify(data, null, 2);
+    fs.writeFileSync(filePath, jsonData);
+    console.log("Data has been saved to", filePath);
+  } catch (error) {
+    console.error("Error saving data to JSON file:", error);
+  }
+};
+
 (async () => {
   const browser = await puppeteer.launch({
     headless: false,
@@ -330,21 +340,12 @@ const generateRandomUA = () => {
 
       console.log(children_categories.length, "all children categories");
 
-      var out = "[";
-      for (var indx = 0; indx < children_categories.length - 1; indx++) {
-        out += JSON.stringify(children_categories[indx], null, 4) + ",";
-      }
-      out +=
-        JSON.stringify(
-          children_categories[children_categories.length - 1],
-          null,
-          4
-        ) + "]";
+      saveToFile(children_categories, "courses.json");
 
-      fs.writeFile("courses.json", out, (err) => {
-        if (err) throw err;
-        console.log("File saved");
-      });
+      // fs.writeFile("courses.json", children_categories, (err) => {
+      //   if (err) throw err;
+      //   console.log("File saved");
+      // });
 
       // await page2.waitForTimeout(5000); // 2 second
       await page2.close();
@@ -353,21 +354,12 @@ const generateRandomUA = () => {
 
   await page.screenshot({ path: "step2.png" });
 
-  var out = "[";
-  for (var indx = 0; indx < children_categories.length - 1; indx++) {
-    out += JSON.stringify(children_categories[indx], null, 4) + ",";
-  }
-  out +=
-    JSON.stringify(
-      children_categories[children_categories.length - 1],
-      null,
-      4
-    ) + "]";
+  saveToFile(children_categories, "courses.json");
 
-  fs.writeFile("courses.json", out, (err) => {
-    if (err) throw err;
-    console.log("File saved");
-  });
+  // fs.writeFile("courses.json", children_categories, (err) => {
+  //   if (err) throw err;
+  //   console.log("File saved");
+  // });
 
   await page.close();
 

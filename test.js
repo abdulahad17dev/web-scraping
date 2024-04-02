@@ -22,12 +22,19 @@ const stream = require("stream");
 require("dotenv").config();
 
 const generateRandomUA = () => {
-  // Array of random user agents
   const userAgents = user_agents;
-  // Get a random index based on the length of the user agents array
   const randomUAIndex = Math.floor(Math.random() * userAgents.length);
-  // Return a random user agent using the index above
   return userAgents[randomUAIndex];
+};
+
+const saveToFile = (data, filePath) => {
+  try {
+    const jsonData = JSON.stringify(data, null, 2);
+    fs.writeFileSync(filePath, jsonData);
+    console.log("Data has been saved to", filePath);
+  } catch (error) {
+    console.error("Error saving data to JSON file:", error);
+  }
 };
 
 (async () => {
@@ -338,16 +345,18 @@ const generateRandomUA = () => {
     // await page2.waitForTimeout(2000); // 2 second
   }
 
-  var out = "[";
-  for (var indx = 0; indx < boxes.length - 1; indx++) {
-    out += JSON.stringify(boxes[indx], null, 4) + ",";
-  }
-  out += JSON.stringify(boxes[boxes.length - 1], null, 4) + "]";
+  // var out = "[";
+  // for (var indx = 0; indx < boxes.length - 1; indx++) {
+  //   out += JSON.stringify(boxes[indx], null, 4) + ",";
+  // }
+  // out += JSON.stringify(boxes[boxes.length - 1], null, 4) + "]";
 
-  await fs.writeFile("courses.json", out, (err) => {
-    if (err) throw err;
-    console.log("File saved");
-  });
+  saveToFile(boxes, "courses.json");
+
+  // await fs.writeFile("courses.json", boxes, (err) => {
+  //   if (err) throw err;
+  //   console.log("File saved");
+  // });
 
   // const products = await page.$$eval(".product-card", (elements) =>
   //   elements.map((e) => ({
