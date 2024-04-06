@@ -1,25 +1,10 @@
-// let puppeteer = require("puppeteer");
-
-// (async () => {
-//   const browser = await puppeteer.launch({ args: ["--no-sandbox"] });
-//   const page = await browser.newPage();
-//   await page.goto("https://uzum.uz/ru");
-
-//   // let's make a screenshot to debug if the page looks good
-//   await page.screenshot({ path: "step1.png" });
-
-//   // now make sure the search input is there on the page.
-//   await page.waitForSelector(".subtitle-item");
-
-//   await page.screenshot({ path: "step2.png" });
-//   await browser.close();
-// })();
-
-const fs = require("fs");
+// const fs = require("fs");
 const puppeteer = require("puppeteer");
-const user_agents = require("./user-agents.json");
-const stream = require("stream");
+const user_agents = require("./assets/user-agents.json");
+const { default: mongoose } = require("mongoose");
+const saveProduct = require("./src/schemas/products");
 require("dotenv").config();
+require("./config/database");
 
 const generateRandomUA = () => {
   const userAgents = user_agents;
@@ -27,18 +12,22 @@ const generateRandomUA = () => {
   return userAgents[randomUAIndex];
 };
 
-const saveToFile = (data, filePath) => {
-  try {
-    const jsonData = JSON.stringify(data, null, 2);
-    fs.writeFileSync(filePath, jsonData);
-    console.log("Data has been saved to", filePath);
-  } catch (error) {
-    console.error("Error saving data to JSON file:", error);
-  }
-};
+// const saveToFile = (data, filePath) => {
+//   try {
+//     const jsonData = JSON.stringify(data, null, 2);
+//     fs.writeFileSync(filePath, jsonData);
+//     console.log("Data has been saved to", filePath);
+//   } catch (error) {
+//     console.error("Error saving data to JSON file:", error);
+//   }
+// };
+
+// const connectMongoDb = async () => {
+//   await mongoose.connect("mongodb://localhost:27017/mydb");
+//   console.log("Connected successfuly");
+// };
 
 (async () => {
-  // Launch the browser
   const browser = await puppeteer.launch({
     headless: false,
     args: [
@@ -337,12 +326,14 @@ const saveToFile = (data, filePath) => {
         return null;
       });
 
-      boxes[index].product_info = response?.payload?.data || null;
+      boxes[index].product_info = response?.payload?.data || {};
+
+      await saveProduct(boxes[index]);
 
       await page2.close();
     } else await page2.close();
 
-    // await page2.waitForTimeout(2000); // 2 second
+    // await page2.waitForTimeout(3000); // 2 second
   }
 
   // var out = "[";
@@ -351,7 +342,7 @@ const saveToFile = (data, filePath) => {
   // }
   // out += JSON.stringify(boxes[boxes.length - 1], null, 4) + "]";
 
-  saveToFile(boxes, "courses.json");
+  // saveToFile(boxes, "courses.json");
 
   // await fs.writeFile("courses.json", boxes, (err) => {
   //   if (err) throw err;
